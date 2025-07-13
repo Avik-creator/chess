@@ -187,7 +187,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-gray-600 dark:text-gray-300 mb-6 italic">
-                "The AI is incredibly smart and has helped me improve my chess game significantly. Highly recommended!"
+                &quot;The AI is incredibly smart and has helped me improve my chess game significantly. Highly recommended!&quot;
               </p>
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
@@ -209,7 +209,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-gray-600 dark:text-gray-300 mb-6 italic">
-                "Perfect for practicing different strategies. The AI adapts well to different playing styles."
+                &quot;Perfect for practicing different strategies. The AI adapts well to different playing styles.&quot;
               </p>
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
@@ -231,7 +231,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-gray-600 dark:text-gray-300 mb-6 italic">
-                "Great interface and challenging gameplay. I've been playing for weeks and still learning new things!"
+                  &quot;Great interface and challenging gameplay. I&apos;ve been playing for weeks and still learning new things!&quot;
               </p>
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
