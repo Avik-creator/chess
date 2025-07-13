@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UserRound, Brain, Settings, RotateCcw, Clock, Trophy, Target, Menu, X } from "lucide-react";
+import { UserRound, Brain, Settings, RotateCcw, Clock, Trophy, Target, Menu } from "lucide-react";
 import ModeToggle from "@/components/themeToggle";
 import { Chess } from "chess.js";
 import type { Square } from "chess.js";
@@ -469,7 +469,7 @@ export default function ChessGame() {
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <p>Use "New Game" to reset</p>
+              <p>Use &quot;New Game&quot; to reset</p>
             </div>
           </div>
         </CardContent>
