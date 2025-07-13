@@ -15,13 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
 export default function ChessGame() {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
-  const [model, setModel] = useState("");
   const [userName, setUserName] = useState("");
+  const [userColor, setUserColor] = useState<"white" | "black">("white");
   const [isModalOpen, setIsModalOpen] = useState(true);
   const [isAIThinking, setIsAIThinking] = useState(false);
   const [gameStatus, setGameStatus] = useState("");
@@ -32,9 +33,20 @@ export default function ChessGame() {
   const [moveCount, setMoveCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const aiColor = userColor === "white" ? "black" : "white";
+  const aiTurn = aiColor === "white" ? "w" : "b";
+  const userTurn = userColor === "white" ? "w" : "b";
+
   useEffect(() => {
     setGameStatus("");
   }, []);
+
+  // Start AI move if AI plays first (white)
+  useEffect(() => {
+    if (!isModalOpen && gameStartTime && game.fen() === new Chess().fen() && aiColor === "white") {
+      setTimeout(() => requestAIMove(), 1000);
+    }
+  }, [isModalOpen, gameStartTime, aiColor]);
 
   async function requestAIMove(gameInstance?: Chess) {
     const currentGame = gameInstance || game;
@@ -44,8 +56,8 @@ export default function ChessGame() {
       return;
     }
 
-    if (currentGame.turn() !== "b") {
-      console.error("Error: AI called when it's not Black's turn");
+    if (currentGame.turn() !== aiTurn) {
+      console.error(`Error: AI called when it's not ${aiColor}'s turn`);
       return;
     }
 
@@ -57,17 +69,13 @@ export default function ChessGame() {
 
     try {
       const requestData = {
-        fen: currentGame.fen(),
         legalMoves: currentGame.moves({ verbose: false }),
-        model,
+        currentBoard: currentGame.fen(),
+        color: aiColor,
+        userColor: userColor,
       };
 
-      console.log("Sending to AI:", {
-        turn: currentGame.turn(),
-        fen: requestData.fen,
-        legalMovesCount: requestData.legalMoves.length,
-        sampleMoves: requestData.legalMoves.slice(0, 5),
-      });
+      console.log("Sending to AI:", requestData);
 
       const res = await fetch("/api/move", {
         method: "POST",
@@ -97,12 +105,11 @@ export default function ChessGame() {
         reader.releaseLock();
       }
 
-      console.log("AI response:", text);
-
       let moveString = text
         .replace(/^Move:\s*/i, "")
         .replace(/^AI Move:\s*/i, "")
         .replace(/^Black plays:\s*/i, "")
+        .replace(/^White plays:\s*/i, "")
         .trim();
 
       const moveMatch = moveString.match(
@@ -208,7 +215,8 @@ export default function ChessGame() {
     if (game.isGameOver()) {
       if (game.isCheckmate()) {
         const winner = game.turn() === "w" ? "Black" : "White";
-        toast.success(`Checkmate! ${winner} wins!`, {
+        const isUserWinner = (winner.toLowerCase() === userColor);
+        toast.success(`Checkmate! ${winner} wins! ${isUserWinner ? 'Congratulations!' : 'Better luck next time!'}`, {
           duration: 10000,
         });
       } else if (game.isDraw()) {
@@ -242,13 +250,18 @@ export default function ChessGame() {
     toast.success("New game started!", {
       duration: 2000,
     });
+
+    // If AI plays white (goes first), start AI move after a short delay
+    if (aiColor === "white") {
+      setTimeout(() => requestAIMove(newGameInstance), 1000);
+    }
   }
 
   function onSquareClick(args: { square: string }) {
     const square = args.square;
     if (selectedSquare && legalSquares.includes(square)) {
       if (isAIThinking || game.isGameOver()) return;
-      if (game.turn() !== "w") return;
+      if (game.turn() !== userTurn) return;
 
       const newGame = new Chess(game.fen());
       const move = newGame.move({
@@ -289,7 +302,7 @@ export default function ChessGame() {
     }
 
     const piece = game.get(square as Square);
-    if (game.turn() === "w" && piece && piece.color === "w") {
+    if (game.turn() === userTurn && piece && piece.color === userTurn) {
       setSelectedSquare(square);
       const moves = game.moves({ square: square as Square, verbose: true }) as {
         to: string;
@@ -322,7 +335,7 @@ export default function ChessGame() {
     const { sourceSquare, targetSquare } = args;
     if (isAIThinking || game.isGameOver()) return false;
     if (!targetSquare) return false;
-    if (game.turn() !== "w") return false;
+    if (game.turn() !== userTurn) return false;
 
     const newGame = new Chess(game.fen());
     const move = newGame.move({
@@ -473,23 +486,29 @@ export default function ChessGame() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserName(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="model">AI Model</Label>
-              <Select value={model} onValueChange={setModel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select AI model" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt-4">GPT-4</SelectItem>
-                  <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                  <SelectItem value="claude-3">Claude 3</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-3">
+              <Label>Choose Your Color</Label>
+              <RadioGroup value={userColor} onValueChange={(value: "white" | "black") => setUserColor(value)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="white" id="white" />
+                  <Label htmlFor="white" className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-white rounded-full border border-gray-300"></div>
+                    White (You go first)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="black" id="black" />
+                  <Label htmlFor="black" className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-black rounded-full border border-gray-300"></div>
+                    Black (AI goes first)
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
             <Button 
               className="w-full" 
               onClick={() => {
-                if (userName && model) {
+                if (userName) {
                   setIsModalOpen(false);
                   setGameStartTime(new Date());
                   toast.success("Game settings saved! Let's play!", {
@@ -497,7 +516,7 @@ export default function ChessGame() {
                   });
                 }
               }}
-              disabled={!userName || !model}
+              disabled={!userName}
             >
               Start Game
             </Button>
@@ -531,36 +550,65 @@ export default function ChessGame() {
                   </Sheet>
                 </div>
 
-                {/* AI Player Info (Top) */}
-                <Card className="border-white/20 bg-black/80 mb-3">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
-                          <AvatarFallback className="bg-white/10">
-                            <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-white text-base sm:text-lg">AI Assistant</span>
-                          <span className="text-xs sm:text-sm text-white/60">
-                            Computer Player • Black
-                          </span>
+                {/* Player Cards - Dynamic ordering based on board orientation */}
+                {(userColor === "white" ? [
+                  // AI on top, User on bottom when user is white
+                  <Card key="ai" className="border-white/20 bg-black/80 mb-3">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
+                            <AvatarFallback className="bg-white/10">
+                              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-base sm:text-lg">AI Assistant</span>
+                            <span className="text-xs sm:text-sm text-white/60">
+                              Computer Player • {aiColor.charAt(0).toUpperCase() + aiColor.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isAIThinking && (
+                            <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/50 text-xs">
+                              Thinking...
+                            </Badge>
+                          )}
+                          {game.turn() === aiTurn && !game.isGameOver() && !isAIThinking && (
+                            <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse shadow-lg shadow-orange-400/50"></div>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {isAIThinking && (
-                          <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/50 text-xs">
-                            Thinking...
-                          </Badge>
-                        )}
-                        {game.turn() === "b" && !game.isGameOver() && !isAIThinking && (
-                          <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse shadow-lg shadow-orange-400/50"></div>
-                        )}
+                    </CardContent>
+                  </Card>
+                ] : [
+                  // User on top, AI on bottom when user is black
+                  <Card key="user" className="border-white/20 bg-black/80 mb-3">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
+                            <AvatarFallback className="bg-white/10">
+                              <UserRound className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-base sm:text-lg">{userName}</span>
+                            <span className="text-xs sm:text-sm text-white/60">
+                              Human Player • {userColor.charAt(0).toUpperCase() + userColor.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {game.turn() === userTurn && !game.isGameOver() && !isAIThinking && (
+                            <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ])}
 
                 {/* Chess Board */}
                 <Card className="border-white/30 bg-black/80 mb-3">
@@ -572,38 +620,72 @@ export default function ChessGame() {
                           onSquareClick={onSquareClick}
                           onPieceDrop={onDrop}
                           customSquareStyles={getCustomSquareStyles()}
-                          boardOrientation="white"
+                          boardOrientation={userColor}
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Human Player Info (Bottom) */}
-                <Card className="border-white/20 bg-black/80 mb-4">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
-                          <AvatarFallback className="bg-white/10">
-                            <UserRound className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-white text-base sm:text-lg">{userName}</span>
-                          <span className="text-xs sm:text-sm text-white/60">
-                            Human Player • White
-                          </span>
+                {/* Bottom Player Card */}
+                {(userColor === "white" ? [
+                  // User on bottom when user is white
+                  <Card key="user" className="border-white/20 bg-black/80 mb-4">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
+                            <AvatarFallback className="bg-white/10">
+                              <UserRound className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-base sm:text-lg">{userName}</span>
+                            <span className="text-xs sm:text-sm text-white/60">
+                              Human Player • {userColor.charAt(0).toUpperCase() + userColor.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {game.turn() === userTurn && !game.isGameOver() && !isAIThinking && (
+                            <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {game.turn() === "w" && !game.isGameOver() && !isAIThinking && (
-                          <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                        )}
+                    </CardContent>
+                  </Card>
+                ] : [
+                  // AI on bottom when user is black
+                  <Card key="ai" className="border-white/20 bg-black/80 mb-4">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
+                            <AvatarFallback className="bg-white/10">
+                              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-base sm:text-lg">AI Assistant</span>
+                            <span className="text-xs sm:text-sm text-white/60">
+                              Computer Player • {aiColor.charAt(0).toUpperCase() + aiColor.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isAIThinking && (
+                            <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/50 text-xs">
+                              Thinking...
+                            </Badge>
+                          )}
+                          {game.turn() === aiTurn && !game.isGameOver() && !isAIThinking && (
+                            <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse shadow-lg shadow-orange-400/50"></div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ])}
 
                 {/* Game Controls */}
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -640,18 +722,24 @@ export default function ChessGame() {
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserName(e.target.value)}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="model">AI Model</Label>
-                          <Select value={model} onValueChange={setModel}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="gpt-4">GPT-4</SelectItem>
-                              <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                              <SelectItem value="claude-3">Claude 3</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="space-y-3">
+                          <Label>Choose Your Color</Label>
+                          <RadioGroup value={userColor} onValueChange={(value: "white" | "black") => setUserColor(value)}>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="white" id="white" />
+                              <Label htmlFor="white" className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-white rounded-full border border-gray-300"></div>
+                                White (You go first)
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="black" id="black" />
+                              <Label htmlFor="black" className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-black rounded-full border border-gray-300"></div>
+                                Black (AI goes first)
+                              </Label>
+                            </div>
+                          </RadioGroup>
                         </div>
                       </div>
                     </DialogContent>

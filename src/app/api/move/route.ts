@@ -10,7 +10,7 @@ const groq = createGroq({
 export async function POST(req: Request) {
     const { legalMoves, currentBoard, color, userColor } = await req.json();
 
-    const model = groq("deepseek-r1-distill-llama-70b");
+    const model = groq("llama-3.3-70b-versatile");
 
     const stream = streamText({
         model,
