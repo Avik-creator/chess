@@ -17,6 +17,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Chess AI",
   description: "Play Chess against AI and improve your skills.",
+  openGraph:{
+    title: "Chess AI",
+    description: "Play Chess against AI and improve your skills.",
+    url: "chess.avikmukherjee.me",
+    siteName: "Chess AI",
+  },
+  twitter: {
+    card: "summary",
+    title: "Chess AI",
+    description: "Play Chess against AI and improve your skills."
+  }
 };
 
 export default function RootLayout({
