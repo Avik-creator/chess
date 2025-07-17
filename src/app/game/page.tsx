@@ -19,6 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 
 const AI_MODELS = [
+  { id: "stockfish-17-depth-18", name: "Stockfish 17 (Grandmaster)", provider: "Chess-API", description: "Strongest (~2750 ELO)" },
+  { id: "stockfish-17-depth-15", name: "Stockfish 17 (Master)", provider: "Chess-API", description: "Very Strong (~2600 ELO)" },
+  { id: "stockfish-17-depth-12", name: "Stockfish 17 (Expert)", provider: "Chess-API", description: "Strong (~2350 ELO)" },
+  { id: "stockfish-17-depth-8", name: "Stockfish 17 (Advanced)", provider: "Chess-API", description: "Intermediate (~2000 ELO)" },
   { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", provider: "Groq", description: "Most advanced" },
   {id: "llama3-70b-8192", name: "Llama 3 70B", provider: "Groq", description: "Advanced"},
   { id: "llama-3.1-70b-versatile", name: "Llama 3.1 70B", provider: "Groq", description: "Balanced" },
@@ -32,7 +36,7 @@ export default function ChessGame() {
   const [position, setPosition] = useState(game.fen())
   const [userName, setUserName] = useState("")
   const [userColor, setUserColor] = useState<"white" | "black">("white")
-  const [selectedModel, setSelectedModel] = useState("llama-3.3-70b-versatile")
+  const [selectedModel, setSelectedModel] = useState("stockfish-17-depth-12")
   const [isModalOpen, setIsModalOpen] = useState(true)
   const [isAIThinking, setIsAIThinking] = useState(false)
   const [gameStatus, setGameStatus] = useState("")
